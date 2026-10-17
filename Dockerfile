@@ -10,7 +10,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Install dependencies. The postinstall script runs `prisma generate`,
 # which needs the schema and config but never connects to the database.
 FROM base AS deps
-COPY package.json package-lock.json prisma.config.ts ./
+COPY package.json package-lock.json .npmrc prisma.config.ts ./
 COPY prisma ./prisma
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npm ci
 
