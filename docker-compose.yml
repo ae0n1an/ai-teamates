@@ -1,15 +1,75 @@
+# Production-style stack: Postgres, a one-off schema push job, then the app.
+#   cp .env.example .env    # fill in BETTER_AUTH_SECRET at minimum
+#   docker compose up -d --build
+#
+# For local development with `npm run dev`, start only the database (and UI):
+#   docker compose up -d postgres adminer
+#
+# Database UI: http://localhost:8080 (logs in automatically; dev only).
+
 services:
   postgres:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_teamates
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_teamates}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:5
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_AUTOLOGIN_USER: ${POSTGRES_USER:-postgres}
+      ADMINER_AUTOLOGIN_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      ADMINER_AUTOLOGIN_DB: ${POSTGRES_DB:-ai_teamates}
+    volumes:
+      - ./docker/adminer/autologin.php:/var/www/html/plugins-enabled/autologin.php:ro
+    ports:
+      - "127.0.0.1:${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-push:
+    build:
+      context: .
+      target: db-push
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_teamates}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_teamates}?schema=public
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    depends_on:
+      db-push:
+        condition: service_completed_successfully
 
 volumes:
   postgres-data:

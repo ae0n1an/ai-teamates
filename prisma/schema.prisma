@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -20,6 +19,7 @@ model User {
   accounts      Account[]
   members       Member[]
   invitations   Invitation[]
+  bots          Bot[]
 
   @@unique([email])
   @@map("user")
@@ -117,4 +117,20 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+}
+
+model Bot {
+  id           String   @id @default(nanoid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  avatar       String   @default(nanoid())
+  job          String
+  instructions String?
+  sandboxId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@map("bots")
 }

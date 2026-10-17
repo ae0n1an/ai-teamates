@@ -12,3 +12,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - Never create branches, worktrees, or commits automatically. Only do so when the user explicitly asks for that specific action in the current request.
 - Leave changes uncommitted in the working tree on the current branch and let the user decide when and how to commit.
+
+## Database
+
+This is a development project. There is no backwards compatibility and the data is worthless. Prefer data loss: never backfill, migrate, or preserve existing rows, and never spend effort on keeping old data working. Every schema change means a clean slate.
+
+- Apply Prisma schema changes with `npx prisma db push` only. Never run `prisma migrate` (dev, deploy, reset, etc.) or create files under `prisma/migrations`.
+- The Docker `db-push` job runs `prisma db push --force-reset`, wiping the database on every start. This is dev-only and must be replaced (marked `TODO(prod)` in the `Dockerfile`) before production is supported.

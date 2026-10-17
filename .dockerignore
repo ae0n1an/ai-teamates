@@ -1,0 +1,15 @@
+.git
+.next
+node_modules
+lib/generated
+.env*
+!.env.example
+.agents
+.claude
+.vscode
+Dockerfile
+docker-compose.yml
+.dockerignore
+npm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
